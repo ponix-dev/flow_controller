@@ -1,0 +1,17 @@
+[package]
+name = "lorawan_flash"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "lf"
+path = "src/main.rs"
+
+[dependencies]
+btleplug = "0.11"
+clap = { version = "4", features = ["derive", "env"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "io-std", "io-util"] }
+uuid = "1"
+anyhow = "1"
+hex = "0.4"
+dotenvy = "0.15"

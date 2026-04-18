@@ -1,0 +1,44 @@
+[env]
+_.file = ".env"
+
+[tools]
+rust = "latest"
+
+[tools."github:probe-rs/probe-rs"]
+version = "latest"
+
+[tools."github:probe-rs/probe-rs".platforms]
+linux-x64 = { asset_pattern = "probe-rs-tools-x86_64-unknown-linux-gnu.tar.xz" }
+linux-arm64 = { asset_pattern = "probe-rs-tools-aarch64-unknown-linux-gnu.tar.xz" }
+macos-arm64 = { asset_pattern = "probe-rs-tools-aarch64-apple-darwin.tar.xz" }
+macos-x64 = { asset_pattern = "probe-rs-tools-x86_64-apple-darwin.tar.xz" }
+
+[tasks.build]
+description = "Build firmware in release mode"
+run = "cargo build --release -p flow_controller --target thumbv7em-none-eabi"
+
+[tasks.flash]
+description = "Build and flash firmware via probe-rs"
+run = "cargo run --release -p flow_controller --target thumbv7em-none-eabi"
+
+[tasks.check]
+description = "Check firmware"
+run = "cargo check -p flow_controller --target thumbv7em-none-eabi"
+
+[tasks.clippy]
+description = "Run clippy on firmware"
+run = "cargo clippy -p flow_controller --target thumbv7em-none-eabi"
+
+[tasks."lf:install"]
+description = "Install the lf binary to cargo bin"
+run = "cargo install --path lorawan_flash"
+
+[tasks."lf:scan"]
+description = "Scan for BLE devices"
+depends = ["lf:install"]
+run = "lf scan"
+
+[tasks."lf:provision"]
+description = "Provision LoRaWAN keys via BLE"
+depends = ["lf:install"]
+run = "lf provision"

@@ -1,0 +1,53 @@
+[package]
+name = "flow_controller"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Embassy (upgraded for BLE compatibility with nrf-sdc/trouble-host)
+embassy-executor = { version = "0.10", default-features = false, features = ["platform-cortex-m", "executor-thread", "executor-interrupt", "defmt"] }
+embassy-time = { version = "0.5", default-features = false, features = ["defmt", "defmt-timestamp-uptime"] }
+embassy-sync = { version = "0.8", features = ["defmt"] }
+embassy-futures = "0.1.1"
+embassy-nrf = { version = "0.10", default-features = false, features = [
+    "defmt",
+    "nrf52840",
+    "time-driver-rtc1",
+    "gpiote",
+    "unstable-pac",
+    "rt",
+] }
+
+# BLE (nRF SoftDevice Controller via trouble)
+nrf-sdc = { version = "0.4", default-features = false, features = ["defmt", "peripheral", "nrf52840"] }
+nrf-mpsl = { version = "0.3", default-features = false, features = ["defmt", "critical-section-impl"] }
+trouble-host = { git = "https://github.com/embassy-rs/trouble.git", features = ["defmt", "derive", "gatt"] }
+bt-hci = { version = "0.8", default-features = false, features = ["defmt"] }
+
+# Logging/Debug
+defmt = "1.0"
+defmt-rtt = "1.0"
+panic-probe = { version = "1.0", features = ["print-defmt"] }
+
+# HAL traits / storage
+embedded-storage = "0.3"
+embedded-hal = "1.0"
+embedded-hal-async = "1.0"
+embedded-hal-bus = { version = "0.1", features = ["async"] }
+embedded-io = { version = "0.6.1", features = ["defmt-03"] }
+embedded-io-async = { version = "0.6.1", features = ["defmt-03"] }
+
+# Core
+cortex-m = "0.7.6"
+cortex-m-rt = "0.7.0"
+static_cell = "2"
+rand = { version = "0.8.5", default-features = false }
+rand_core = "0.6"
+
+# LoRaWAN
+lora-phy = { git = "https://github.com/lora-rs/lora-rs", features = ["lorawan-radio", "defmt-03"] }
+lorawan-device = { git = "https://github.com/lora-rs/lora-rs", default-features = false, features = [
+    "embassy-time",
+    "region-us915",
+    "defmt-03",
+] }
