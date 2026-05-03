@@ -4,9 +4,10 @@
 LoRaWAN flow controller for RAK4631 WisBlock (nRF52840 + SX1262) with BLE provisioning. The firmware advertises as a BLE peripheral; a host-side CLI connects as a BLE central to provision LoRaWAN OTAA keys (DevEUI, AppEUI, AppKey). Keys are persisted to flash and survive reboots.
 
 ## Project Structure
-Cargo workspace with two crates:
+Cargo workspace with two crates plus a hardware directory:
 - **`firmware/`** — embedded firmware (`#![no_std]`, `thumbv7em-none-eabi`)
 - **`lorawan_flash/`** — host-side BLE CLI (`lf` binary). See [`lorawan_flash/README.md`](lorawan_flash/README.md) for subcommand details and env-var contract.
+- **`hardware/`** — KiCad schematic and PCB sources. [`hardware/PINOUT.md`](hardware/PINOUT.md) is the **single source of truth** for GPIO assignments — firmware and schematic must agree with it.
 
 ## Commands
 

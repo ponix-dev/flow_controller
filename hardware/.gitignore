@@ -1,0 +1,33 @@
+# KiCad backup and autosave files
+*.kicad_sch-bak
+*.kicad_pcb-bak
+*-backups/
+_autosave-*
+
+# KiCad lock files
+*.lck
+
+# Legacy cache files
+*-cache.lib
+*-cache.dcm
+*.cache
+
+# Rescue files
+*-rescue.lib
+*-rescue.dcm
+*-rescue.kicad_sym
+
+# Netlist and routing files
+*.dsn
+*.ses
+
+# Fabrication outputs (regenerate from source)
+gerbers/
+fabrication/
+
+# 3D model cache
+3d-cache/
+
+# OS files
+.DS_Store
+Thumbs.db
