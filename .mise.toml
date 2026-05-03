@@ -13,6 +13,10 @@ linux-arm64 = { asset_pattern = "probe-rs-tools-aarch64-unknown-linux-gnu.tar.xz
 macos-arm64 = { asset_pattern = "probe-rs-tools-aarch64-apple-darwin.tar.xz" }
 macos-x64 = { asset_pattern = "probe-rs-tools-x86_64-apple-darwin.tar.xz" }
 
+[tasks.erase]
+description = "Erase all flash on the board"
+run = "probe-rs erase --chip nRF52840_xxAA"
+
 [tasks.build]
 description = "Build firmware in release mode"
 run = "cargo build --release -p flow_controller --target thumbv7em-none-eabi"

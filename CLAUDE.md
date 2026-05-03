@@ -6,7 +6,7 @@ LoRaWAN flow controller for RAK4631 WisBlock (nRF52840 + SX1262) with BLE provis
 ## Project Structure
 Cargo workspace with two crates:
 - **`firmware/`** — embedded firmware (`#![no_std]`, `thumbv7em-none-eabi`)
-- **`lorawan_flash/`** — host-side BLE CLI (`lorawan_flash`)
+- **`lorawan_flash/`** — host-side BLE CLI (`lf` binary). See [`lorawan_flash/README.md`](lorawan_flash/README.md) for subcommand details and env-var contract.
 
 ## Commands
 

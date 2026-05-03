@@ -1,4 +1,5 @@
 use defmt::{error, info};
+use embassy_futures::select::{select, Either};
 use embassy_nrf::gpio::{Input, Output};
 use embassy_nrf::spim;
 use embassy_time::{Delay, Duration, Timer};
@@ -68,64 +69,82 @@ pub(crate) async fn lorawan_task(
     let mut device: Device<_, _, _, 256, 1> =
         Device::new(region, radio, EmbassyTimer::new(), lorawan_rng);
 
-    info!("LoRaWAN waiting for keys via BLE provisioning...");
-    let keys = LORAWAN_KEYS.wait().await;
-    info!("LoRaWAN keys received, DevEUI: {:02x}", keys.deveui);
-    info!("Uplink interval: {} seconds", UPLINK_INTERVAL_SECS);
+    info!("[lorawan] waiting for keys...");
+    let mut keys = LORAWAN_KEYS.wait().await;
 
-    // OTAA join
-    let join_mode = JoinMode::OTAA {
-        deveui: DevEui::from(keys.deveui),
-        appeui: AppEui::from(keys.appeui),
-        appkey: AppKey::from(keys.appkey),
-    };
-
-    let mut retries = 0;
     loop {
-        match device.join(&join_mode).await {
-            Ok(JoinResponse::JoinSuccess) => {
-                info!("LoRaWAN network joined");
-                break;
-            }
-            Ok(other) => {
-                error!("Join failed: {:?}", defmt::Debug2Format(&other));
-            }
-            Err(e) => {
-                error!("Join error: {:?}", defmt::Debug2Format(&e));
-            }
-        }
-        let delay = generate_delay(&mut device.rng, retries);
-        info!("Retrying join in {} seconds", delay);
-        Timer::after(Duration::from_secs(delay.into())).await;
-        retries += 1;
-    }
+        info!("[lorawan] keys received, DevEUI: {:02x}", keys.deveui);
+        info!("[lorawan] starting join and uplink loop");
+        info!("[lorawan] uplink interval: {} seconds", UPLINK_INTERVAL_SECS);
 
-    // Main uplink loop
-    let mut uplink_count: u32 = 0;
-    let message = b"ponix";
-    loop {
-        info!("Sending uplink #{}", uplink_count);
+        // OTAA join
+        let join_mode = JoinMode::OTAA {
+            deveui: DevEui::from(keys.deveui),
+            appeui: AppEui::from(keys.appeui),
+            appkey: AppKey::from(keys.appkey),
+        };
 
-        match device.send(message, 1, false).await {
-            Ok(response) => {
-                info!(
-                    "Uplink sent, response: {:?}",
-                    defmt::Debug2Format(&response)
-                );
-                while let Some(downlink) = device.take_downlink() {
-                    info!(
-                        "Downlink received on port {}: {:02x}",
-                        downlink.fport,
-                        downlink.data.as_slice()
-                    );
+        let mut retries = 0;
+        loop {
+            match device.join(&join_mode).await {
+                Ok(JoinResponse::JoinSuccess) => {
+                    info!("[lorawan] network joined");
+                    break;
+                }
+                Ok(other) => {
+                    error!("Join failed: {:?}", defmt::Debug2Format(&other));
+                }
+                Err(e) => {
+                    error!("Join error: {:?}", defmt::Debug2Format(&e));
                 }
             }
-            Err(e) => {
-                error!("Uplink failed: {:?}", defmt::Debug2Format(&e));
-            }
+            let delay = generate_delay(&mut device.rng, retries);
+            info!("[lorawan] retrying join in {} seconds", delay);
+            Timer::after(Duration::from_secs(delay.into())).await;
+            retries += 1;
         }
 
-        uplink_count += 1;
-        Timer::after(Duration::from_secs(UPLINK_INTERVAL_SECS)).await;
+        // Main uplink loop — select waits for either the timer or new keys
+        let mut uplink_count: u32 = 0;
+        let message = b"ponix";
+        loop {
+            info!("[lorawan] sending uplink #{}", uplink_count);
+
+            match device.send(message, 1, false).await {
+                Ok(response) => {
+                    info!(
+                        "[lorawan] uplink sent, response: {:?}",
+                        defmt::Debug2Format(&response)
+                    );
+                    while let Some(downlink) = device.take_downlink() {
+                        info!(
+                            "[lorawan] downlink received on port {}: {:02x}",
+                            downlink.fport,
+                            downlink.data.as_slice()
+                        );
+                    }
+                }
+                Err(e) => {
+                    error!("[lorawan] uplink failed: {:?}", defmt::Debug2Format(&e));
+                }
+            }
+
+            uplink_count += 1;
+
+            match select(
+                Timer::after(Duration::from_secs(UPLINK_INTERVAL_SECS)),
+                LORAWAN_KEYS.wait(),
+            )
+            .await
+            {
+                Either::First(()) => {}
+                Either::Second(new_keys) => {
+                    info!("[lorawan] new keys received, exiting current uplink loop");
+                    info!("[lorawan] new DevEUI: {:02x}", new_keys.deveui);
+                    keys = new_keys;
+                    break;
+                }
+            }
+        }
     }
 }

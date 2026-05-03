@@ -19,7 +19,7 @@ struct ProvisionServer {
 #[gatt_service(uuid = "12345678-1234-5678-1234-56789abcdef0")]
 struct ProvisionService {
     #[characteristic(uuid = "12345678-1234-5678-1234-56789abcdef2", read, write)]
-    lorawan_keys: u8,
+    lorawan_keys: [u8; 32],
 }
 
 // ── BLE helpers ─────────────────────────────────────────────────────────────
@@ -100,9 +100,14 @@ async fn gatt_events_task(
                     Err(e) => warn!("[ble] error sending reply: {:?}", e),
                 }
                 if let Some(keys) = pending_keys {
-                    info!("[ble] LoRaWAN keys provisioned, DevEUI: {:02x}", keys.deveui);
-                    flash::write_keys(nvmc, &keys);
-                    LORAWAN_KEYS.signal(keys);
+                    let existing = flash::read_keys();
+                    if existing.as_ref() == Some(&keys) {
+                        info!("[ble] keys unchanged, skipping update");
+                    } else {
+                        info!("[ble] LoRaWAN keys provisioned, DevEUI: {:02x}", keys.deveui);
+                        flash::write_keys(nvmc, &keys);
+                        LORAWAN_KEYS.signal(keys);
+                    }
                 }
             }
             _ => {}

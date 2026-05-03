@@ -29,7 +29,7 @@ enum Commands {
     },
     /// Provision LoRaWAN keys via BLE (DevEUI + AppEUI + AppKey)
     Provision {
-        /// Device EUI (16 hex chars, e.g. "024B00D87ED5B370")
+        /// Device EUI (16 hex chars, e.g. "0123456789ABCDEF")
         #[arg(long, env = "DEVEUI")]
         deveui: String,
         /// Application EUI (16 hex chars)
@@ -161,7 +161,7 @@ async fn write_lorawan_keys(
         .ok_or_else(|| anyhow::anyhow!("LoRaWAN Keys characteristic not found"))?;
 
     device
-        .write(keys_char, &payload, WriteType::WithoutResponse)
+        .write(keys_char, &payload, WriteType::WithResponse)
         .await?;
     println!("LoRaWAN keys provisioned successfully");
     Ok(())
@@ -181,8 +181,9 @@ async fn main() -> Result<()> {
         } => {
             let device = connect_and_discover(&name).await?;
             write_lorawan_keys(&device, &deveui, &appeui, &appkey).await?;
+            println!("Disconnecting...");
             device.disconnect().await?;
-            println!("Disconnected.");
+            println!("Done.");
             Ok(())
         }
     }

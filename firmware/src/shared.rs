@@ -4,6 +4,7 @@ use embassy_sync::signal::Signal;
 // ── Shared state ────────────────────────────────────────────────────────────
 
 /// LoRaWAN OTAA credentials received via BLE provisioning.
+#[derive(PartialEq)]
 pub(crate) struct LorawanKeys {
     pub deveui: [u8; 8],
     pub appeui: [u8; 8],
