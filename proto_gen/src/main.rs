@@ -12,7 +12,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .ok_or("could not derive workspace root from CARGO_MANIFEST_DIR")?;
 
     let proto_root = workspace_root.join("proto");
-    let out_path = workspace_root.join("firmware/src/proto/flow_controller.rs");
+    let out_path = workspace_root.join("firmware/src/proto/valve.rs");
 
     if let Some(parent) = out_path.parent() {
         std::fs::create_dir_all(parent)?;
@@ -22,7 +22,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     generator.add_protoc_arg(format!("-I{}", proto_root.display()));
 
     generator.compile_protos(
-        &[proto_root.join("flow_controller/v1/flow_controller.proto")],
+        &[proto_root.join("flow_controller/v1/valve.proto")],
         &out_path,
     )?;
 

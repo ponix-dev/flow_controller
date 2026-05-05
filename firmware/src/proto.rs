@@ -1,11 +1,11 @@
 //! Generated wire types from `proto/flow_controller/v1/*.proto`.
 //!
 //! Regenerate via `mise run proto:gen` after editing `.proto` files.
-//! The generated file `proto/flow_controller.rs` is committed; do not hand-edit.
+//! The generated file `proto/valve.rs` is committed; do not hand-edit.
 
 #[allow(warnings, clippy::all)]
 mod generated {
-    include!("proto/flow_controller.rs");
+    include!("proto/valve.rs");
 }
 
 // Phase 3 wires these into the uplink/downlink path; until then the re-export

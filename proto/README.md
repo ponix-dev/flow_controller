@@ -9,7 +9,7 @@ Wire-format definitions shared between firmware and the backend. Generation is
 proto/
 ├── buf.yaml                                # v2 lint + breaking-change config (STANDARD lint, FILE breaking)
 └── flow_controller/v1/
-    └── flow_controller.proto               # Uplink, Downlink, ValveState
+    └── valve.proto                         # ValveState enum + Uplink / Downlink messages
 ```
 
 The directory structure follows buf conventions
