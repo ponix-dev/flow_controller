@@ -1,10 +1,18 @@
 # flow_controller
 
-LoRaWAN-controlled drip-irrigation valve. RAK4631 firmware that joins LoRaWAN
-US915 OTAA, polls every 5 minutes for downlink commands, and drives a Rain Bird
-latching solenoid via a RAK17001 H-bridge module.
+LoRaWAN-controlled drip-irrigation valve. The end state is a Class-A device that
+polls every 5 minutes for downlink commands and drives a Rain Bird latching
+solenoid via a RAK17001 H-bridge module on a RAK4631 WisBlock.
 
 OTAA keys are provisioned over BLE by a host-side CLI; keys persist in flash.
+
+## Status
+
+- **Today**: BLE-provisioned beacon — joins LoRaWAN US915 OTAA, sends a
+  placeholder uplink every 5 s, ignores downlinks. No actuator wired up yet.
+- **Phase 1** (workspace foundation, hardware in-tree, pinout doc): **complete**.
+- **Up next**: Phase 2 — `proto/` directory, micropb codegen via `buf`. See
+  [`ROADMAP.md`](ROADMAP.md).
 
 ## Workspace layout
 

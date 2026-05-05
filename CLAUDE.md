@@ -30,11 +30,13 @@ cargo run -p lorawan_flash -- provision  # uses DEVEUI/APPEUI/APPKEY/END_DEVICE 
 ```
 
 ## Architecture
-- **Board**: RAK4631 WisBlock
+- **Board**: RAK4631 WisBlock Core on RAK19007 base
 - **MCU**: nRF52840 (Cortex-M4F)
 - **Target**: `thumbv7em-none-eabi`
 - **Radio**: SX1262 via SPI
 - **Region**: US915, sub-band 2
+- **H-bridge**: RAK17001 (STSPIN250), PH/EN/PWM control. See [`hardware/PINOUT.md`](hardware/PINOUT.md) for GPIO assignments — that file is authoritative for both firmware and schematic.
+- **Load**: single Rain Bird latching solenoid (DC, two-lead)
 - **Framework**: Embassy async runtime with lora-rs LoRaWAN stack
 - **Logging**: defmt via RTT
 

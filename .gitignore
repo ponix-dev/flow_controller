@@ -1,3 +1,9 @@
 /target
 .env
 handoff.md
+
+# KiCad per-machine state (active sheet, view position)
+*.kicad_prl
+
+# VS Code Local History extension
+.history/

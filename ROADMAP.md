@@ -10,14 +10,14 @@ A Class-A device that polls the backend every 5 minutes and drives a single Rain
 
 ---
 
-## Phase 1: Workspace foundation
+## Phase 1: Workspace foundation ✅
 
 Bring the existing standalone KiCad work into this repo and establish a single source of truth for pin assignments shared by schematic and firmware. No electronics work in this phase — paper and file moves only.
 
-- [ ] Copy `/Users/srall/development/kicad/rak4630-example/` into `flow_controller/hardware/`; drop the inner `.git`; keep `.gitignore`, libraries, build dir, existing schematic.
-- [ ] Identify the WisBlock base board + IO slot the RAK13002 H-bridge sits in; derive the two nRF52840 pin numbers that map to the DRV8833 IN1/IN2 used for the single valve.
-- [ ] Write `hardware/PINOUT.md` documenting those two pins as the canonical mapping. Reference it from `firmware/src/board.rs` (comment) and from the schematic's net labels so both must agree.
-- [ ] Update workspace `README.md` (top-level) noting the new `hardware/` directory and the firmware-↔-schematic interchangeability requirement.
+- [x] Copy `/Users/srall/development/kicad/rak4630-example/` into `flow_controller/hardware/` (renamed to `flow_controller.*`, internal refs rewritten, `.git`/history/backups dropped).
+- [x] Identify hardware: RAK19007 base + RAK17001 H-bridge module (STSPIN250) on the dedicated IO slot; derive the four nRF52840 pins for PH/EN/PWM/FAULT (P0.04, P0.10, P0.21, P0.09) plus WB_IO2/P1.02 for IO-rail power. Cross-checked against SX1262 reserved pins.
+- [x] Write `hardware/PINOUT.md` as the canonical pin mapping; reference it from a comment in `firmware/src/board.rs`. Schematic-side net labelling (DRV8837 → STSPIN250 reconciliation) deferred to Phase 4 with explicit deltas captured in PINOUT.md.
+- [x] Top-level `README.md` created; `CLAUDE.md` Project Structure updated to include `hardware/`.
 
 > **Why first:** every later phase either picks GPIOs (Phase 3 stub, Phase 4 real driver) or labels nets (Phase 4 schematic refinement). One source of truth up front prevents thrashing both files when a pin moves.
 
