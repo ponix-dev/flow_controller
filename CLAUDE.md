@@ -4,9 +4,11 @@
 LoRaWAN flow controller for RAK4631 WisBlock (nRF52840 + SX1262) with BLE provisioning. The firmware advertises as a BLE peripheral; a host-side CLI connects as a BLE central to provision LoRaWAN OTAA keys (DevEUI, AppEUI, AppKey). Keys are persisted to flash and survive reboots.
 
 ## Project Structure
-Cargo workspace with two crates plus a hardware directory:
+Cargo workspace with three crates plus `proto/` and `hardware/` directories:
 - **`firmware/`** — embedded firmware (`#![no_std]`, `thumbv7em-none-eabi`)
 - **`lorawan_flash/`** — host-side BLE CLI (`lf` binary). See [`lorawan_flash/README.md`](lorawan_flash/README.md) for subcommand details and env-var contract.
+- **`proto_gen/`** — host-only crate that runs `micropb-gen` to regenerate `firmware/src/proto/`. Triggered by `mise run proto:gen`.
+- **`proto/`** — wire-format definitions. `flow_controller/v1/flow_controller.proto` is the schema; [`proto/README.md`](proto/README.md) explains the regen workflow and why there's no `buf.gen.yaml`.
 - **`hardware/`** — KiCad schematic and PCB sources. [`hardware/PINOUT.md`](hardware/PINOUT.md) is the **single source of truth** for GPIO assignments — firmware and schematic must agree with it.
 
 ## Commands
@@ -22,11 +24,18 @@ mise run clippy             # Clippy on firmware
 mise run lf:scan            # Scan for BLE devices
 mise run lf:provision       # Provision LoRaWAN keys (reads .env)
 
+# Proto / micropb codegen
+mise run proto:lint         # buf lint
+mise run proto:format       # buf format -w (in place)
+mise run proto:gen          # regenerate firmware/src/proto/flow_controller.rs
+mise run proto:check        # CI helper: regen + verify clean git diff
+
 # Explicit cargo commands
 cargo build --release -p flow_controller --target thumbv7em-none-eabi
 cargo build --release -p lorawan_flash
 cargo run -p lorawan_flash -- scan
 cargo run -p lorawan_flash -- provision  # uses DEVEUI/APPEUI/APPKEY/END_DEVICE env vars
+cargo run -p proto_gen                   # equivalent to `mise run proto:gen`
 ```
 
 ## Architecture

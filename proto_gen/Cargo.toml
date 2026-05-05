@@ -1,0 +1,9 @@
+[package]
+name = "proto_gen"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Generates micropb-based Rust types from proto/ into firmware/src/proto/. Run via `mise run proto:gen`."
+
+[dependencies]
+micropb-gen = "0.6"

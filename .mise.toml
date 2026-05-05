@@ -3,6 +3,8 @@ _.file = ".env"
 
 [tools]
 rust = "latest"
+buf = "latest"
+protoc = "latest"
 
 [tools."github:probe-rs/probe-rs"]
 version = "latest"
@@ -46,3 +48,20 @@ run = "lf scan"
 description = "Provision LoRaWAN keys via BLE"
 depends = ["lf:install"]
 run = "lf provision"
+
+[tasks."proto:lint"]
+description = "Lint .proto files with buf"
+run = "buf lint proto"
+
+[tasks."proto:format"]
+description = "Format .proto files in place with buf"
+run = "buf format -w proto"
+
+[tasks."proto:gen"]
+description = "Generate Rust types from .proto files into firmware/src/proto/"
+run = "cargo run -p proto_gen --quiet"
+
+[tasks."proto:check"]
+description = "Verify generated proto code is up to date with .proto sources"
+depends = ["proto:gen"]
+run = "git diff --exit-code -- firmware/src/proto"

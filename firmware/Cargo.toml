@@ -51,3 +51,6 @@ lorawan-device = { git = "https://github.com/lora-rs/lora-rs", default-features 
     "region-us915",
     "defmt-03",
 ] }
+
+# Wire format (generated types under firmware/src/proto/, regenerate via `mise run proto:gen`)
+micropb = { version = "0.6", default-features = false, features = ["encode", "decode"] }

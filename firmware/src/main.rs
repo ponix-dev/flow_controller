@@ -8,6 +8,7 @@ mod ble;
 mod board;
 mod flash;
 mod lorawan;
+mod proto;
 mod rng;
 mod shared;
 

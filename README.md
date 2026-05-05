@@ -11,7 +11,11 @@ OTAA keys are provisioned over BLE by a host-side CLI; keys persist in flash.
 - **Today**: BLE-provisioned beacon — joins LoRaWAN US915 OTAA, sends a
   placeholder uplink every 5 s, ignores downlinks. No actuator wired up yet.
 - **Phase 1** (workspace foundation, hardware in-tree, pinout doc): **complete**.
-- **Up next**: Phase 2 — `proto/` directory, micropb codegen via `buf`. See
+- **Phase 2** (`proto/` + `buf` lint + micropb codegen pipeline): **complete** —
+  generated types compile into the firmware but aren't yet wired into the
+  uplink/downlink path.
+- **Up next**: Phase 3 — replace the placeholder `b"ponix"` payload with a
+  serialized `Uplink`, decode `Downlink` and route to a stub valve. See
   [`ROADMAP.md`](ROADMAP.md).
 
 ## Workspace layout
@@ -19,8 +23,9 @@ OTAA keys are provisioned over BLE by a host-side CLI; keys persist in flash.
 ```
 firmware/        # embedded firmware (no_std, thumbv7em-none-eabi, Embassy)
 lorawan_flash/   # host-side BLE provisioning CLI (lf binary)
+proto/           # wire-format definitions (.proto, buf.yaml)
+proto_gen/       # host crate; runs micropb-gen to regenerate firmware/src/proto/
 hardware/        # KiCad schematic + pinout source-of-truth (PINOUT.md)
-proto/           # micropb message definitions (added in Phase 2)
 ROADMAP.md       # phased plan, see for current state and direction
 ```
 
