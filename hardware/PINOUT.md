@@ -10,7 +10,19 @@ The point of pinning these here is that the firmware should be **interchangeable
 between the off-the-shelf WisBlock module setup and a future custom PCB** — both
 must follow this map.
 
-## Hardware configuration
+## Targets
+
+The firmware is meant to be byte-identical across two boards:
+
+1. **WisBlock prototype**: RAK4631 Core + RAK19007 base + RAK17001 H-bridge module.
+2. **Custom PCB**: RAK4630 module wired chip-level on the in-tree schematic.
+
+**Both targets use the same H-bridge chip — STSPIN250.** The RAK17001 is an
+STSPIN250 carrier, and the custom PCB schematic must use a discrete STSPIN250
+(not the DRV8837 currently drawn). Same control pins, same firmware. See
+"Custom PCB schematic — required deltas" below.
+
+## Hardware configuration (WisBlock prototype)
 
 - **Core**: RAK4631 (nRF52840 + SX1262)
 - **Base**: RAK19007 WisBlock Base 2nd Gen
@@ -87,12 +99,38 @@ Never drive PH while EN is HIGH and PWM is HIGH for longer than the calibrated
 pulse — that runs continuous current through a latching solenoid that's already
 latched, wasting power.
 
-## Schematic status
+## Custom PCB schematic — required deltas (Phase 4 work)
 
 The current `flow_controller.kicad_sch` is inherited from an earlier
-`rak4630-example` and does not yet wire the RAK17001 or solenoid. Bringing the
-schematic in line with this pin map is a Phase 4 task (alongside the bench
-characterization of the solenoid pulse).
+`rak4630-example`. It uses a **DRV8837** (IN1/IN2-style H-bridge), which has a
+different control protocol from the STSPIN250 the firmware targets. Phase 4
+reconciliation must:
+
+1. **Replace U2 (DRV8837) with STSPIN250** (TSSOP-16 or VFQFPN-16). KiCad ships
+   the symbol/footprint in `Driver_Motor`; preferable to adding to the project
+   library. Repackage choice noted in BOM.
+2. **Add a 10 kΩ pull-up from FAULT to +3V3** — STSPIN250's FAULT is open-drain.
+3. **Add the REF current-limit resistor** to the REF pin (sets peak current —
+   spec a value that allows ~500 mA peak for the latching solenoid pulse, with
+   margin).
+4. **Add a current-sense resistor** on the SENSE pin per STSPIN250 reference
+   design, and a small RC filter on REF if instability is observed.
+5. **Wire VS = +9V** (battery rail) and **VCC = +3V3** (logic). Both rails
+   already exist in the schematic.
+6. **Label the four control nets with functional names** so the schematic and
+   firmware speak the same vocabulary:
+   - `PWM` ← from RAK4630 `P0.21` (= WB_IO3 on prototype)
+   - `PH` ← from RAK4630 `P0.04` (= WB_IO4 on prototype)
+   - `EN` ← from RAK4630 `P0.10` (= WB_IO6 on prototype)
+   - `FAULT` → to RAK4630 `P0.09` (= WB_IO5 on prototype)
+7. **Confirm `BATT_SENSE` ADC pin** — current schematic wires the divider
+   output to an unlabelled RAK4630 pin; document which one and add it to the
+   reserved-pins table (battery monitoring is deferred per "fleet stuff later"
+   but the wire shouldn't conflict with the four control pins above).
+
+The PCB layout (`flow_controller.kicad_pcb`) is currently empty — no tracks to
+rework, so the chip swap is essentially redrawing U2 in the schematic and
+re-running ERC.
 
 ## References
 

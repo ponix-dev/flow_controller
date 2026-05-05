@@ -58,8 +58,9 @@ Replace the placeholder `"ponix"` payload with serialized `Uplink`, decode `Down
 Swap the Phase 3 stub for a driver that pulses the H-bridge to flip the latching solenoid. The protocol layer above is untouched.
 
 - [ ] Bench-characterize the Rain Bird latching solenoid: minimum reliable pulse duration at the available rail voltage, measured across at least 10 actuations in each direction. Capture as constants `OPEN_PULSE_MS`, `CLOSE_PULSE_MS`.
-- [ ] Implement the real driver in `firmware/src/valve.rs`: `(IN1=high, IN2=low)` for `OPEN_PULSE_MS` to open; reverse to close; `(low, low)` otherwise. Guard against `(high, high)` shoot-through.
-- [ ] Add a local decoupling cap (≥100 µF) at the H-bridge's VM pin in the schematic to absorb the inrush spike — verify on hardware that the rail doesn't droop enough to brown out the nRF52840 mid-pulse.
+- [ ] Implement the real driver in `firmware/src/valve.rs` using STSPIN250 PH/EN/PWM control: open = `(PH=H, PWM=H, EN=H for OPEN_PULSE_MS, then EN=L)`; close = `(PH=L, PWM=H, EN=H for CLOSE_PULSE_MS, then EN=L)`; coast otherwise. Drive `WB_IO2` high at boot to power the IO rail.
+- [ ] **Reconcile schematic with `hardware/PINOUT.md`**: replace DRV8837 with STSPIN250, label the four control nets (PWM/PH/EN/FAULT), add the FAULT pull-up + REF current-limit resistor + sense resistor per STSPIN250 reference design. See `hardware/PINOUT.md` "Custom PCB schematic — required deltas".
+- [ ] Add a local decoupling cap (≥100 µF) at the STSPIN250 VS pin in the schematic to absorb the inrush spike — verify on hardware that the rail doesn't droop enough to brown out the nRF52840 mid-pulse.
 - [ ] End-to-end hardware validation: backend issues OPEN → physical valve clicks open → next Uplink echoes OPEN. Repeat across power cycles.
 - [ ] Refresh `hardware/PINOUT.md` with any pin/voltage facts learned during characterization.
 
