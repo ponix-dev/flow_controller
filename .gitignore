@@ -1,6 +1,7 @@
 /target
 .env
 handoff.md
+.thoughts/
 
 # KiCad per-machine state (active sheet, view position)
 *.kicad_prl
