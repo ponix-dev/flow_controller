@@ -1,0 +1,12 @@
+[package]
+name = "domain"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Wire format (generated types under domain/src/proto/, regenerate via `mise run proto:gen`)
+micropb = { version = "0.6", default-features = false, features = ["encode", "decode"] }
+
+[dev-dependencies]
+# Minimal `block_on` for exercising the async loop body in host tests.
+pollster = "0.3"

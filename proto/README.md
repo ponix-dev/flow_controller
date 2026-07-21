@@ -22,7 +22,7 @@ later with no restructure.
 ```bash
 mise run proto:lint         # buf lint
 mise run proto:format       # buf format -w (writes in place)
-mise run proto:gen          # regenerate Rust types into firmware/src/proto/
+mise run proto:gen          # regenerate Rust types into domain/src/proto/
 mise run proto:check        # run :gen and verify nothing changed (CI)
 ```
 

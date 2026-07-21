@@ -9,7 +9,4 @@ mod generated {
     include!("valve.rs");
 }
 
-// Phase 3 wires these into the uplink/downlink path; until then the re-export
-// has no in-tree caller.
-#[allow(unused_imports)]
 pub use generated::flow_controller_::v1_::*;

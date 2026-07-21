@@ -36,16 +36,16 @@ Define the wire format the backend and device share, and wire micropb codegen in
 
 ---
 
-## Phase 3: End-to-end Class-A polling with stub actuator
+## Phase 3: End-to-end Class-A polling with stub actuator ✅
 
 Replace the placeholder `"ponix"` payload with serialized `Uplink`, decode `Downlink`, and route commands into a stub valve module that updates flash state without touching hardware. Validates the entire command path before any wires move.
 
-- [ ] Change `UPLINK_INTERVAL_SECS` from `5` to `300` in `firmware/src/shared.rs`.
-- [ ] Add `firmware/src/valve.rs` with a `ValveState` enum and stub `open()` / `close()` that log via defmt and update an in-memory state — no GPIO yet.
-- [ ] Extend the flash record (currently `MAGIC + DevEUI + AppEUI + AppKey`, 36 bytes) to include the persisted `ValveState` — versioned magic so old records don't crash. Reuses `firmware/src/flash.rs`.
-- [ ] Replace the hardcoded `b"ponix"` send in `lorawan.rs` with a serialized `Uplink` constructed from the persisted state.
-- [ ] Replace the existing `take_downlink` log-and-discard with: deserialize `Downlink` → if `desired_state` differs from `current_state`, call the stub `open()`/`close()`, persist new state, log the transition. Next uplink reflects it.
-- [ ] Bench-test on the device: backend issues OPEN → device echoes `current_state = OPEN` in the next Uplink; same for CLOSED; same after a power cycle (state survives).
+- [x] Change `UPLINK_INTERVAL_SECS` from `5` to `300` in `firmware/src/shared.rs`.
+- [x] Add `firmware/src/valve.rs` with a `ValveState` enum and stub `open()` / `close()` that log via defmt and update an in-memory state — no GPIO yet.
+- [x] Extend the flash record (was `MAGIC + DevEUI + AppEUI + AppKey`, 36 bytes) to include the persisted `ValveState` — magic bumped `LORA` → `FCV1`, 40-byte record, old records read as "no record". `firmware/src/flash.rs`.
+- [x] Replace the hardcoded `b"ponix"` send in `lorawan.rs` with a serialized `Uplink` constructed from the persisted state.
+- [x] Replace the existing `take_downlink` log-and-discard with: deserialize `Downlink` → if `desired_state` differs from `current_state`, call the stub `open()`/`close()`, persist new state, log the transition. Next uplink reflects it.
+- [ ] Bench-test on the device: backend issues OPEN → device echoes `current_state = OPEN` in the next Uplink; same for CLOSED; same after a power cycle (state survives). _(pending hardware)_
 
 > **Why third:** the full networking path — encoding, decoding, persistence, state echo — is exercised end-to-end with zero hardware risk. If this works, Phase 4 reduces to "make the GPIOs do what the stub claims."
 
