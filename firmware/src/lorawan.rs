@@ -1,5 +1,5 @@
 use defmt::{error, info};
-use domain::{run_iteration, ClientState, NetError, Network, ValveState};
+use domain::{init_state, run_iteration, NetError, Network};
 use embassy_futures::select::{select, Either};
 use embassy_nrf::gpio::{Input, Output};
 use embassy_nrf::spim;
@@ -16,7 +16,7 @@ use lorawan_device::region::Subband;
 use lorawan_device::{AppEui, AppKey, DevEui};
 use rand_core::RngCore;
 
-use crate::flash::{self, FlashStore};
+use crate::flash::FlashStore;
 use crate::rng::SoftwareRng;
 use crate::shared::{SharedNvmc, LORAWAN_KEYS, MAX_TX_POWER, UPLINK_INTERVAL_SECS};
 use crate::valve::StubValve;
@@ -131,13 +131,13 @@ pub(crate) async fn run(
     info!("[lorawan] waiting for keys...");
     let mut keys = LORAWAN_KEYS.wait().await;
 
-    // Valve state persists across rejoins/reboots; hydrate once from flash.
-    let mut client = ClientState::new(flash::read_valve_state().unwrap_or(ValveState::Unknown));
-    info!("[lorawan] hydrated valve state: {}", client.current.to_byte());
-
     // Actuator + persistence seams are stable across rejoins.
     let mut valve = StubValve;
     let mut store = FlashStore::new(nvmc);
+
+    // Restore the persisted valve position, or drive closed on a fresh device.
+    let mut client = init_state(&keys, &mut valve, &mut store).await;
+    info!("[lorawan] boot valve state: {}", client.current.to_byte());
 
     loop {
         info!("[lorawan] keys received, DevEUI: {:02x}", keys.deveui);

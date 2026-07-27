@@ -24,6 +24,6 @@ mod types;
 
 pub use codec::{decode_downlink, encode_uplink, DecodeError};
 pub use record::{pack_record, unpack_record};
-pub use runtime::{run_iteration, NetError, Network, Store, Valve};
+pub use runtime::{init_state, run_iteration, NetError, Network, Store, Valve};
 pub use state::{on_actuated, on_downlink, ClientState, DownlinkOutcome};
 pub use types::{LorawanKeys, ValveState};

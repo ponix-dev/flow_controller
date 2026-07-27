@@ -79,6 +79,25 @@ where
     Ok(())
 }
 
+/// Establish the boot valve state. A persisted `Open`/`Closed` is restored
+/// as-is. When no known position exists (no record, or `Unknown`), drive the
+/// valve closed and persist it, so a fresh device starts in a guaranteed-closed
+/// state rather than an assumed one. Re-closing a latching valve is harmless.
+pub async fn init_state<V, S>(keys: &LorawanKeys, valve: &mut V, store: &mut S) -> ClientState
+where
+    V: Valve,
+    S: Store,
+{
+    match store.load_valve_state() {
+        Some(state) if state != ValveState::Unknown => ClientState::new(state),
+        _ => {
+            valve.close().await;
+            store.persist(keys, ValveState::Closed).await;
+            ClientState::new(ValveState::Closed)
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -171,5 +190,42 @@ mod tests {
         let rebooted = ClientState::new(store.load_valve_state().unwrap());
         let (buf, n) = encode_uplink(rebooted.current, rebooted.last_commanded);
         assert_eq!(&buf[..n], &[0x08, 0x01, 0x10, 0x01]);
+    }
+
+    /// No persisted record: boot drives the valve closed and persists Closed.
+    #[test]
+    fn init_drives_closed_when_no_state() {
+        let k = keys();
+        let mut valve = FakeValve::default();
+        let mut store = FakeStore::default();
+        let client = pollster::block_on(init_state(&k, &mut valve, &mut store));
+        assert_eq!(client.current, ValveState::Closed);
+        assert_eq!(valve.closes, 1);
+        assert_eq!(store.load_valve_state(), Some(ValveState::Closed));
+    }
+
+    /// Persisted Unknown is treated as "no known state": boot drives closed.
+    #[test]
+    fn init_drives_closed_when_unknown() {
+        let k = keys();
+        let mut valve = FakeValve::default();
+        let mut store = FakeStore::default();
+        pollster::block_on(store.persist(&k, ValveState::Unknown));
+        let client = pollster::block_on(init_state(&k, &mut valve, &mut store));
+        assert_eq!(client.current, ValveState::Closed);
+        assert_eq!(valve.closes, 1);
+    }
+
+    /// A persisted Open is restored without actuating.
+    #[test]
+    fn init_restores_persisted_state_without_actuating() {
+        let k = keys();
+        let mut valve = FakeValve::default();
+        let mut store = FakeStore::default();
+        pollster::block_on(store.persist(&k, ValveState::Open));
+        let client = pollster::block_on(init_state(&k, &mut valve, &mut store));
+        assert_eq!(client.current, ValveState::Open);
+        assert_eq!(valve.opens, 0);
+        assert_eq!(valve.closes, 0);
     }
 }
