@@ -95,7 +95,11 @@ async fn main(spawner: Spawner) {
     }
 
     // ── Spawn tasks ─────────────────────────────────────────────────────
-    spawner.spawn(unwrap!(lorawan::lorawan_task(
+    // Provisioning runs in the background.
+    spawner.spawn(unwrap!(ble::provisioning_task(sdc, nvmc)));
+
+    // LoRaWAN is the primary loop; run it in the main context.
+    lorawan::run(
         lorawan::RadioResources {
             spim,
             nss,
@@ -107,8 +111,6 @@ async fn main(spawner: Spawner) {
         },
         lorawan_rng,
         nvmc,
-    )));
-
-    // BLE runs in main context (not spawned — owns non-'static sdc)
-    ble::run_ble(sdc, nvmc).await;
+    )
+    .await;
 }

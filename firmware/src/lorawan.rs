@@ -83,8 +83,7 @@ pub(crate) struct RadioResources {
     pub rf_switch_tx: Output<'static>,
 }
 
-#[embassy_executor::task]
-pub(crate) async fn lorawan_task(
+pub(crate) async fn run(
     radio: RadioResources,
     lorawan_rng: SoftwareRng,
     nvmc: &'static SharedNvmc,

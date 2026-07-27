@@ -123,7 +123,8 @@ async fn gatt_events_task(
 
 // ── Public entry point ──────────────────────────────────────────────────────
 
-pub(crate) async fn run_ble(
+#[embassy_executor::task]
+pub(crate) async fn provisioning_task(
     controller: nrf_sdc::SoftdeviceController<'static>,
     nvmc: &'static SharedNvmc,
 ) {
