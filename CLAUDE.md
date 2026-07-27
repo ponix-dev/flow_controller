@@ -11,7 +11,7 @@ Cargo workspace with four crates plus a `proto/` directory:
 - **`firmware/`** — embedded firmware (`#![no_std]`, `thumbv7em-none-eabi`); board/wire-specific setup + real trait impls, depends on `domain`.
 - **`lorawan_flash/`** — host-side BLE CLI (`lf` binary). See [`lorawan_flash/README.md`](lorawan_flash/README.md) for subcommand details and env-var contract.
 - **`proto_gen/`** — host-only crate that runs `micropb-gen` to regenerate `domain/src/proto/`. Triggered by `mise run proto:gen`.
-- **`proto/`** — wire-format definitions. `flow_controller/v1/flow_controller.proto` is the schema; [`proto/README.md`](proto/README.md) explains the regen workflow and why there's no `buf.gen.yaml`.
+- **`proto/`** — wire-format definitions. `flow_controller/v1/valve.proto` is the schema; [`proto/README.md`](proto/README.md) explains the regen workflow and why there's no `buf.gen.yaml`.
 
 KiCad schematic and PCB sources, along with the canonical GPIO pin assignments, live in the sibling `flow_controller_hardware/` repo.
 
@@ -72,5 +72,5 @@ Copy `.env.example` to `.env` and fill in your LoRaWAN keys:
 - `#![no_std]`, `#![no_main]` — no standard library (firmware only)
 - Async/await via Embassy executor
 - OTAA join with jittered retry backoff
-- `default-members = ["lorawan_flash"]` — bare `cargo build` only builds the CLI; firmware requires explicit `--target`
+- `default-members = ["domain", "lorawan_flash", "proto_gen"]` — bare `cargo build` builds the host crates; firmware requires explicit `--target`
 - LoRaWAN keys **and** valve state persisted to nRF52840 flash (last 4 KB page) in one `b"FCV1"` record; `Nvmc` is shared between the BLE and LoRaWAN tasks via an `embassy_sync` async `Mutex` (`shared::SharedNvmc`)

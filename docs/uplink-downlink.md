@@ -1,31 +1,38 @@
 # Uplink / Downlink
 
-The LoRaWAN Class-A messaging loop: join a network, send an uplink on a timer,
-and process any downlink that comes back. Implemented in
-[`src/lorawan.rs`](../firmware/src/lorawan.rs). The wire schema lives in
+The LoRaWAN Class-A messaging loop: join a network, send an `Uplink` on a timer,
+and apply any `Downlink` that comes back in the RX window. The firmware side is
+[`src/lorawan.rs`](../firmware/src/lorawan.rs); the portable loop body, codec, and
+valve state machine live in the [`domain`](../domain) crate. The wire schema is
 [`proto/flow_controller/v1/valve.proto`](../proto/flow_controller/v1/valve.proto).
 
-> **Status.** The join loop, timer cadence, re-provisioning, and downlink
-> draining are implemented. The **payload is currently a hardcoded
-> `b"ponix"`** and downlinks are only logged. Wiring the protobuf `Uplink` /
-> `Downlink` messages and a valve module is the in-progress phase — see
-> [Planned wire format](#planned-wire-format) below.
+> **Status.** Join, timer cadence, re-provisioning, serialized `Uplink`/`Downlink`,
+> and routing commands into the valve state machine are implemented and
+> host-tested (`cargo test -p domain`). The **actuator is a stub**
+> ([`src/valve.rs`](../firmware/src/valve.rs) logs only, no GPIO). Uplink TX has
+> run on hardware; **downlink RX has not been validated on hardware** yet.
 
-## The task lifecycle
+## The loop
+
+`lorawan::run` sets up the radio, waits for keys, joins, then drives
+`domain::run_iteration` each interval. The firmware implements `domain`'s three
+seams — `Network` (radio), `Valve` (actuator), `Store` (flash) — so the loop body
+is hardware-agnostic and testable on the host.
 
 ```mermaid
 flowchart TD
     A[radio + region setup<br/>US915, sub-band 2] --> B[wait on LORAWAN_KEYS]
-    B --> C[OTAA join]
-    C -->|fail| D[backoff w/ jitter<br/>then retry]
-    D --> C
-    C -->|JoinSuccess| E[uplink loop]
-    E --> F[send payload on fport 1]
-    F --> G[drain downlinks<br/>take_downlink]
-    G --> H{wait: timer OR new keys}
-    H -->|timer elapsed| E
-    H -->|new keys| I[re-join with new keys]
-    I --> C
+    B --> C[init_state: restore or drive closed]
+    C --> D[OTAA join]
+    D -->|fail| E[backoff w/ jitter, retry]
+    E --> D
+    D -->|JoinSuccess| F[run_iteration]
+    F --> G[encode + send Uplink on fport 1]
+    G --> H[drain downlinks<br/>decode + route to valve]
+    H --> I{wait: timer OR new keys}
+    I -->|timer elapsed| F
+    I -->|new keys| J[re-join with new keys]
+    J --> D
 ```
 
 ## Radio & region configuration
@@ -37,46 +44,47 @@ flowchart TD
 | Max TX power | 14 dBm | `shared::MAX_TX_POWER` |
 | RX window lead time | 100 | `set_rx_window_lead_time` |
 | RX window buffer | 200 | `set_rx_window_buffer` |
-| Uplink interval | 5 s | `shared::UPLINK_INTERVAL_SECS` |
-| Uplink fport | 1 | `device.send(msg, 1, false)` |
-| Confirmed? | no (`false`) | unconfirmed uplinks |
+| Uplink interval | 300 s (5 min) | `shared::UPLINK_INTERVAL_SECS` |
+| Uplink fport | 1 | `domain::runtime::FPORT` |
+| Confirmed? | no | unconfirmed uplinks |
 
 ## Join with backoff
 
-OTAA join retries in a loop until it succeeds. The delay between attempts comes
-from `generate_delay(rng, retries)`:
+OTAA join retries in a loop until it succeeds. The delay comes from
+`generate_delay(rng, retries)`:
 
 - Base grows linearly: `10 + 10 * retries` seconds, capped at 3600 s.
-- Jitter of ±20% is added from the `SoftwareRng` so a fleet of devices doesn't
-  retry in lockstep.
+- Jitter of ±20% from the `SoftwareRng` so a fleet doesn't retry in lockstep.
 
-## Uplink loop & downlink handling
+## One cycle (`run_iteration`)
 
-After a successful join the task loops:
+Per interval, `domain::run_iteration`:
 
-1. Send the payload on fport 1 (unconfirmed).
-2. On success, drain every queued downlink with `device.take_downlink()`.
-   Today each is just logged (port + hex bytes).
-3. Wait via `select` on **either** the interval timer **or** a new
-   `LORAWAN_KEYS` signal.
-   - Timer fires → send again.
-   - New keys arrive → break the inner loop and re-join (supports live
-     re-provisioning without a reboot).
+1. **Encodes** an `Uplink { current_state, last_commanded_state }` (micropb) and
+   sends it on fport 1, unconfirmed.
+2. **Drains** every downlink the RX window delivered (`Network::next_downlink` →
+   `device.take_downlink()`), logging each on receipt (fport + length + bytes).
+3. Decodes each as a `Downlink { desired_state }` and runs it through the valve
+   state machine (`on_downlink`): a state different from `current` actuates the
+   valve (stub), updates state, and persists to flash; an idempotent,
+   `UNSPECIFIED`, or undecodable command is a no-op.
 
-## Planned wire format
+The firmware then `select`s on **either** the interval timer **or** a new
+`LORAWAN_KEYS` signal — a new signal breaks the loop and re-joins, supporting live
+re-provisioning without a reboot (see [provisioning.md](provisioning.md)).
 
-The [`valve.proto`](../proto/flow_controller/v1/valve.proto) schema is
-already defined and code-generated (via `proto_gen` / micropb) into
-[`src/proto/`](../firmware/src/proto/), but not yet serialized on the wire.
+## Wire format
+
+Generated Rust types (via `proto_gen` / micropb) live in
+[`domain/src/proto/`](../domain/src/proto/); the codec is `domain::codec`.
 
 ### `ValveState` enum
 
 | Value | Number | Meaning |
 | --- | --- | --- |
-| `VALVE_STATE_UNSPECIFIED` | 0 | Default / never sent as a command. |
+| `VALVE_STATE_UNSPECIFIED` | 0 | Field unset / no known state. Ignored as a command. |
 | `VALVE_STATE_OPEN` | 1 | Valve open (flowing). |
 | `VALVE_STATE_CLOSED` | 2 | Valve closed. |
-| `VALVE_STATE_UNKNOWN` | 3 | State indeterminate. |
 
 ### Messages
 
@@ -86,15 +94,15 @@ already defined and code-generated (via `proto_gen` / micropb) into
 | `Downlink` | backend → device | `desired_state` |
 
 - **`Uplink.current_state`** — what the device believes the physical valve is
-  doing right now.
+  doing now.
 - **`Uplink.last_commanded_state`** — the most recent state the backend asked
-  for. It diverges from `current_state` while a command is in flight or if
-  actuation failed — that gap is the whole point of carrying both.
-- **`Downlink.desired_state`** — the state the backend wants; the device
-  executes it and reports the result on the next uplink. The backend should not
-  send `UNKNOWN`.
+  for. Diverges from `current_state` while a command is in flight or if actuation
+  fails — carrying both is the point (see [valve-states.md](valve-states.md)).
+- **`Downlink.desired_state`** — the state the backend wants; the device applies
+  it and reports the result on the next uplink. Send `OPEN` or `CLOSED`; an unset
+  (`UNSPECIFIED`) value is ignored.
 
-### Intended Class-A exchange
+### Class-A exchange
 
 ```mermaid
 sequenceDiagram
@@ -108,13 +116,12 @@ sequenceDiagram
     end
 ```
 
-The planned work replaces `b"ponix"` with a serialized `Uplink`, decodes
-`Downlink` from the drained downlink bytes, routes the command into a valve
-module (initially a log-only stub — no GPIO), and persists valve state in flash
-alongside the keys. That flash change is why [flash-storage.md](flash-storage.md)
-notes a future magic bump to `b"FCV1"`.
+A downlink must be queued at the network server **before** the uplink's RX
+window — Class A only listens right after a TX, so command latency is up to one
+uplink interval.
 
 ## Related docs
-- [startup.md](startup.md) — how the LoRaWAN task is spawned and fed keys.
+- [startup.md](startup.md) — how the LoRaWAN loop is set up and fed keys.
 - [provisioning.md](provisioning.md) — the `LORAWAN_KEYS` signal that gates and
   restarts this loop.
+- [valve-states.md](valve-states.md) — the state machine that downlinks drive.
