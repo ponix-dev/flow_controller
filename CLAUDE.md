@@ -6,13 +6,14 @@ LoRaWAN flow controller for RAK4631 WisBlock (nRF52840 + SX1262) with BLE provis
 Once joined, the device runs a Class-A poll loop (Phase 3): every 5 minutes it sends a serialized `proto::Uplink` carrying `current_state` + `last_commanded_state`, then decodes any `proto::Downlink` in the RX window and routes `desired_state` into `firmware/src/valve.rs`. The valve module is a **stub** — `open()`/`close()` log via defmt and persist state but drive no GPIO yet (the real STSPIN250 H-bridge driver is Phase 4). Valve state is persisted alongside the keys in a single 40-byte flash record with magic `b"FCV1"`.
 
 ## Project Structure
-Cargo workspace with four crates plus `proto/` and `hardware/` directories:
+Cargo workspace with four crates plus a `proto/` directory:
 - **`domain/`** — portable, host-testable business logic (`#![no_std]`, only depends on `micropb`). Holds the generated wire types, `ValveState`/`LorawanKeys`, the `Uplink`/`Downlink` codec, the 40-byte flash record format, the valve state machine, and the trait-generic loop body `run_iteration`. Runs under `cargo test -p domain` on the host — **no device, no radio, no flash**. The `firmware` crate implements its `Network`/`Valve`/`Store` traits with real hardware.
 - **`firmware/`** — embedded firmware (`#![no_std]`, `thumbv7em-none-eabi`); board/wire-specific setup + real trait impls, depends on `domain`.
 - **`lorawan_flash/`** — host-side BLE CLI (`lf` binary). See [`lorawan_flash/README.md`](lorawan_flash/README.md) for subcommand details and env-var contract.
 - **`proto_gen/`** — host-only crate that runs `micropb-gen` to regenerate `domain/src/proto/`. Triggered by `mise run proto:gen`.
 - **`proto/`** — wire-format definitions. `flow_controller/v1/flow_controller.proto` is the schema; [`proto/README.md`](proto/README.md) explains the regen workflow and why there's no `buf.gen.yaml`.
-- **`hardware/`** — KiCad schematic and PCB sources. [`hardware/PINOUT.md`](hardware/PINOUT.md) is the **single source of truth** for GPIO assignments — firmware and schematic must agree with it.
+
+KiCad schematic and PCB sources, along with the canonical GPIO pin assignments, live in the sibling `flow_controller_hardware/` repo.
 
 ## Commands
 
@@ -50,7 +51,7 @@ cargo run -p proto_gen                   # equivalent to `mise run proto:gen`
 - **Target**: `thumbv7em-none-eabi`
 - **Radio**: SX1262 via SPI
 - **Region**: US915, sub-band 2
-- **H-bridge**: RAK17001 (STSPIN250), PH/EN/PWM control. See [`hardware/PINOUT.md`](hardware/PINOUT.md) for GPIO assignments — that file is authoritative for both firmware and schematic.
+- **H-bridge**: RAK17001 (STSPIN250), PH/EN/PWM control. GPIO assignments are canonical in the sibling `flow_controller_hardware/` repo, authoritative for both firmware and schematic.
 - **Load**: single Rain Bird latching solenoid (DC, two-lead)
 - **Framework**: Embassy async runtime with lora-rs LoRaWAN stack
 - **Logging**: defmt via RTT

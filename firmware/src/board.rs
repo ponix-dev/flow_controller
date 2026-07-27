@@ -1,5 +1,6 @@
-// GPIO pin assignments are documented in `hardware/PINOUT.md` — that file is
-// the single source of truth shared by this crate and the schematic.
+// GPIO pin assignments are documented in `../flow_controller_hardware/PINOUT.md`
+// (sibling repo) — that file is the single source of truth shared by this crate
+// and the schematic.
 
 use embassy_nrf::mode::Async;
 use embassy_nrf::{bind_interrupts, peripherals, rng, spim};

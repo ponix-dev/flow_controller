@@ -12,7 +12,7 @@ OTAA keys are provisioned over BLE by a host-side CLI; keys persist in flash.
   OTAA, sends a serialized `Uplink` (current + last-commanded valve state)
   every 5 min, decodes `Downlink` commands and routes them into a stub valve
   module that persists state to flash but drives no GPIO yet.
-- **Phase 1** (workspace foundation, hardware in-tree, pinout doc): **complete**.
+- **Phase 1** (workspace foundation): **complete**.
 - **Phase 2** (`proto/` + `buf` lint + micropb codegen pipeline): **complete**.
 - **Phase 3** (end-to-end command path, stub actuator, `FCV1` flash record):
   **complete** — the full encode/decode/persist/echo path is exercised with no
@@ -29,15 +29,14 @@ firmware/        # embedded firmware (no_std, thumbv7em-none-eabi, Embassy); boa
 lorawan_flash/   # host-side BLE provisioning CLI (lf binary)
 proto/           # wire-format definitions (.proto, buf.yaml)
 proto_gen/       # host crate; runs micropb-gen to regenerate domain/src/proto/
-hardware/        # KiCad schematic + pinout source-of-truth (PINOUT.md)
 ROADMAP.md       # phased plan, see for current state and direction
 ```
 
 ## Where to start
 
 - **Adding a feature or fixing firmware** — see `firmware/` and the overview in
-  [`CLAUDE.md`](CLAUDE.md). For pin assignments, [`hardware/PINOUT.md`](hardware/PINOUT.md)
-  is authoritative.
+  [`CLAUDE.md`](CLAUDE.md). KiCad schematic and pin assignments live in the sibling
+  `flow_controller_hardware/` repo.
 - **Provisioning OTAA keys onto a device** — see [`lorawan_flash/README.md`](lorawan_flash/README.md).
 - **Project direction and what to work on next** — see [`ROADMAP.md`](ROADMAP.md).
 
