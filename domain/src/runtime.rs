@@ -167,9 +167,9 @@ mod tests {
         let mut store = FakeStore::default();
         let mut state = ClientState::new(ValveState::Unknown);
 
-        // Iter 1: nothing queued -> uplink reports Unknown/Unknown.
+        // Iter 1: nothing queued -> Unknown/Unknown is all-default -> empty Uplink.
         pollster::block_on(run_iteration(&mut state, &k, &mut net, &mut valve, &mut store)).unwrap();
-        assert_eq!(net.sent.last().unwrap().as_slice(), &[0x08, 0x03, 0x10, 0x03]);
+        assert!(net.sent.last().unwrap().is_empty());
 
         // Backend queues OPEN. Iter 2: actuate once, persist.
         net.downlinks.push_back(vec![0x08, 0x01]);

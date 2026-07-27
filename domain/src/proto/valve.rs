@@ -1,8 +1,8 @@
 pub mod flow_controller_ {
     pub mod v1_ {
         /// Sent by the backend on each Class-A poll. The device executes
-        /// `desired_state` and reports the result in the next Uplink. Backend should
-        /// not send VALVE_STATE_UNKNOWN.
+        /// `desired_state` and reports the result in the next Uplink. Backend sends
+        /// OPEN or CLOSED; an unset (UNSPECIFIED) desired_state is ignored.
         #[derive(Debug, Default, PartialEq, Clone, Copy)]
         pub struct Downlink {
             pub r#desired_state: ValveState,
@@ -277,10 +277,10 @@ pub mod flow_controller_ {
         impl ValveState {
             /// Maximum encoded size of the enum
             pub const _MAX_SIZE: usize = 10usize;
+            /// Field unset / no known state.
             pub const Unspecified: Self = Self(0);
             pub const Open: Self = Self(1);
             pub const Closed: Self = Self(2);
-            pub const Unknown: Self = Self(3);
         }
         impl core::default::Default for ValveState {
             fn default() -> Self {

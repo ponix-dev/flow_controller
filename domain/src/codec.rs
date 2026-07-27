@@ -48,8 +48,9 @@ mod tests {
         let (buf, n) = encode_uplink(ValveState::Open, ValveState::Open);
         assert_eq!(&buf[..n], &[0x08, 0x01, 0x10, 0x01]);
 
+        // Unknown maps to Unspecified (0); an all-default Uplink encodes to nothing.
         let (buf, n) = encode_uplink(ValveState::Unknown, ValveState::Unknown);
-        assert_eq!(&buf[..n], &[0x08, 0x03, 0x10, 0x03]);
+        assert!(buf[..n].is_empty());
 
         let (buf, n) = encode_uplink(ValveState::Closed, ValveState::Open);
         assert_eq!(&buf[..n], &[0x08, 0x02, 0x10, 0x01]);

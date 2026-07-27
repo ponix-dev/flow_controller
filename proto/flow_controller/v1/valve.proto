@@ -4,15 +4,15 @@ package flow_controller.v1;
 
 // State of (or desired state of) the irrigation valve.
 enum ValveState {
+  // Field unset / no known state.
   VALVE_STATE_UNSPECIFIED = 0;
   VALVE_STATE_OPEN = 1;
   VALVE_STATE_CLOSED = 2;
-  VALVE_STATE_UNKNOWN = 3;
 }
 
 // Sent by the backend on each Class-A poll. The device executes
-// `desired_state` and reports the result in the next Uplink. Backend should
-// not send VALVE_STATE_UNKNOWN.
+// `desired_state` and reports the result in the next Uplink. Backend sends
+// OPEN or CLOSED; an unset (UNSPECIFIED) desired_state is ignored.
 message Downlink {
   ValveState desired_state = 1;
 }

@@ -16,13 +16,13 @@ pub enum ValveState {
 }
 
 impl ValveState {
-    /// Map to the wire enum. `Unknown` is a valid *report* but the backend
-    /// never sends it as a command.
+    /// Map to the wire enum. `Unknown` has no dedicated wire value — it maps to
+    /// `Unspecified` (0), the proto default for "no known state".
     pub fn to_proto(self) -> proto::ValveState {
         match self {
             ValveState::Open => proto::ValveState::Open,
             ValveState::Closed => proto::ValveState::Closed,
-            ValveState::Unknown => proto::ValveState::Unknown,
+            ValveState::Unknown => proto::ValveState::Unspecified,
         }
     }
 
