@@ -8,20 +8,21 @@ mod ble;
 mod board;
 mod flash;
 mod lorawan;
-mod proto;
 mod rng;
 mod shared;
+mod valve;
 
 use defmt::{info, unwrap};
 use embassy_executor::Spawner;
 use embassy_nrf::gpio::{Input, Level, Output, OutputDrive, Pull};
 use embassy_nrf::nvmc::Nvmc;
 use embassy_nrf::{rng as nrf_rng, spim};
+use embassy_sync::mutex::Mutex;
 use nrf_sdc::{self as sdc, mpsl};
 use static_cell::StaticCell;
 use {defmt_rtt as _, panic_probe as _};
 
-use crate::shared::LORAWAN_KEYS;
+use crate::shared::{SharedNvmc, LORAWAN_KEYS};
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
@@ -81,7 +82,11 @@ async fn main(spawner: Spawner) {
     let lorawan_rng = rng::SoftwareRng(lorawan_seed);
 
     // ── Flash: load stored keys ────────────────────────────────────────
-    let nvmc = Nvmc::new(p.NVMC);
+    // `Nvmc` lives behind an async mutex shared by the BLE task (key writes)
+    // and the LoRaWAN task (valve-state writes). The boot-time key read below
+    // is memory-mapped and needs no lock.
+    static NVMC: StaticCell<SharedNvmc> = StaticCell::new();
+    let nvmc: &'static SharedNvmc = NVMC.init(Mutex::new(Nvmc::new(p.NVMC)));
     if let Some(keys) = flash::read_keys() {
         info!("Found LoRaWAN keys in flash, DevEUI: {:02x}", keys.deveui);
         LORAWAN_KEYS.signal(keys);
@@ -90,17 +95,22 @@ async fn main(spawner: Spawner) {
     }
 
     // ── Spawn tasks ─────────────────────────────────────────────────────
-    spawner.spawn(unwrap!(lorawan::lorawan_task(
-        spim,
-        nss,
-        reset,
-        dio1,
-        busy,
-        rf_switch_rx,
-        rf_switch_tx,
-        lorawan_rng,
-    )));
+    // Provisioning runs in the background.
+    spawner.spawn(unwrap!(ble::provisioning_task(sdc, nvmc)));
 
-    // BLE runs in main context (not spawned — owns non-'static sdc)
-    ble::run_ble(sdc, nvmc).await;
+    // LoRaWAN is the primary loop; run it in the main context.
+    lorawan::run(
+        lorawan::RadioResources {
+            spim,
+            nss,
+            reset,
+            dio1,
+            busy,
+            rf_switch_rx,
+            rf_switch_tx,
+        },
+        lorawan_rng,
+        nvmc,
+    )
+    .await;
 }

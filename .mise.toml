@@ -58,10 +58,10 @@ description = "Format .proto files in place with buf"
 run = "buf format -w proto"
 
 [tasks."proto:gen"]
-description = "Generate Rust types from .proto files into firmware/src/proto/"
+description = "Generate Rust types from .proto files into domain/src/proto/"
 run = "cargo run -p proto_gen --quiet"
 
 [tasks."proto:check"]
 description = "Verify generated proto code is up to date with .proto sources"
 depends = ["proto:gen"]
-run = "git diff --exit-code -- firmware/src/proto"
+run = "git diff --exit-code -- domain/src/proto"

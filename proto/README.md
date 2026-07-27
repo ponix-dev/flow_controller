@@ -22,7 +22,7 @@ later with no restructure.
 ```bash
 mise run proto:lint         # buf lint
 mise run proto:format       # buf format -w (writes in place)
-mise run proto:gen          # regenerate Rust types into firmware/src/proto/
+mise run proto:gen          # regenerate Rust types into domain/src/proto/
 mise run proto:check        # run :gen and verify nothing changed (CI)
 ```
 
@@ -41,9 +41,11 @@ in another language), we'll add `buf.gen.yaml` then.
 
 ## Schema notes
 
-- **Single shared `ValveState` enum.** Backend never sends
-  `VALVE_STATE_UNKNOWN` as a `desired_state`; firmware uses `UNKNOWN` only to
-  describe its own first-boot state before any command has been received.
+- **Single shared `ValveState` enum** — `UNSPECIFIED (0)`, `OPEN (1)`,
+  `CLOSED (2)`. The backend sends `OPEN` or `CLOSED` as `desired_state`; an
+  unset/`UNSPECIFIED` value is ignored. There is no dedicated "unknown" wire
+  value — the firmware's internal `Unknown` (erased flash / no known position)
+  maps to `UNSPECIFIED` and is resolved to `CLOSED` at boot.
 - **`current_state` vs. `last_commanded_state`.** Echoing the most recent
   command back lets the backend detect dropped downlinks (no echo within N
   uplinks → resend) without confirmed-downlink semantics.

@@ -36,7 +36,7 @@ sequenceDiagram
     participant CLI as lf (host, BLE central)
     participant Dev as firmware (BLE peripheral)
     participant Flash as NVMC (flash)
-    participant Lora as lorawan_task
+    participant Lora as lorawan::run
 
     Dev->>Dev: advertise as 'flow_ctrl'
     CLI->>Dev: scan + find by name
@@ -80,9 +80,9 @@ the re-provisioning path in [uplink-downlink.md](uplink-downlink.md)).
 
 ## Reconnection / re-provisioning
 
-`gatt_events_task` returns on disconnect, and `run_ble` loops back to advertise
-again — so the device can be re-provisioned at any time without a reboot. New
-keys simply overwrite flash and re-signal the LoRaWAN task.
+`gatt_events_task` returns on disconnect, and `provisioning_task` loops back to
+advertise again — so the device can be re-provisioned at any time without a
+reboot. New keys simply overwrite flash and re-signal the LoRaWAN task.
 
 ## Host CLI reference
 
@@ -93,4 +93,4 @@ keys simply overwrite flash and re-signal the LoRaWAN task.
 
 ## Related docs
 - [flash-storage.md](flash-storage.md) — how the written keys are laid out on flash.
-- [startup.md](startup.md) — where `run_ble` sits in the boot sequence.
+- [startup.md](startup.md) — where `provisioning_task` sits in the boot sequence.

@@ -26,9 +26,9 @@ flowchart TD
     H --> I[read keys from flash]
     I -->|found| J[signal LORAWAN_KEYS]
     I -->|absent| K[log: wait for BLE provisioning]
-    J --> L[spawn lorawan_task]
+    J --> L[spawn provisioning_task<br/>advertise as 'flow_ctrl']
     K --> L
-    L --> M[run_ble in main context<br/>advertise as 'flow_ctrl']
+    L --> M[lorawan::run in main context<br/>wait for keys, join, uplink loop]
 ```
 
 ## Init steps in detail
@@ -41,15 +41,15 @@ flowchart TD
 | SDC | `build_sdc` | `PPI_CH17..29`, `Mem<4720>` | BLE link-layer controller. Supports advertising + one peripheral connection. |
 | SX1262 SPI | `spim::Spim::new` | `TWISPI1`, `P1_11/12/13` | 16 MHz. Control pins: NSS `P1_10`, reset `P1_06`, DIO1 `P1_15`, busy `P1_14`, RF switch RX `P1_05` / TX `P1_07`. |
 | Flash load | `flash::read_keys` | `NVMC` | See [flash-storage.md](flash-storage.md). Signals keys immediately if present. |
-| LoRaWAN task | `spawner.spawn(lorawan_task)` | SPI + control pins + `SoftwareRng` | See [uplink-downlink.md](uplink-downlink.md). |
-| BLE | `ble::run_ble` | SDC controller, `NVMC` | Runs inline in `main` (not spawned) because it owns non-`'static` SDC resources. See [provisioning.md](provisioning.md). |
+| BLE provisioning | `spawner.spawn(ble::provisioning_task)` | SDC controller, `SharedNvmc` | Spawned as a background task; advertises + accepts key writes. See [provisioning.md](provisioning.md). |
+| LoRaWAN loop | `lorawan::run(...).await` | SPI + control pins + `SoftwareRng`, `SharedNvmc` | The device's primary work; runs in the `main` context. See [uplink-downlink.md](uplink-downlink.md). |
 
 ## The two subsystems and how they meet
 
 After startup there are effectively two concurrent flows:
 
-- **BLE** (`run_ble`) — advertises, accepts a connection, receives keys.
-- **LoRaWAN** (`lorawan_task`) — waits for keys, joins, uplinks on a timer.
+- **BLE provisioning** (`ble::provisioning_task`, spawned) — advertises, accepts a connection, receives keys.
+- **LoRaWAN** (`lorawan::run`, the main-context loop) — waits for keys, joins, uplinks on a timer.
 
 They never call each other directly. They communicate through a single
 `Signal<CriticalSectionRawMutex, LorawanKeys>` named `LORAWAN_KEYS`
@@ -63,7 +63,7 @@ flowchart LR
     end
     A -->|signal| S[(LORAWAN_KEYS)]
     B -->|signal| S
-    S -->|wait| C[lorawan_task]
+    S -->|wait| C[lorawan::run]
 ```
 
 At boot, if flash already holds keys, `LORAWAN_KEYS` is signalled right away and

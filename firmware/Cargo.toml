@@ -52,5 +52,5 @@ lorawan-device = { git = "https://github.com/lora-rs/lora-rs", default-features 
     "defmt-03",
 ] }
 
-# Wire format (generated types under firmware/src/proto/, regenerate via `mise run proto:gen`)
-micropb = { version = "0.6", default-features = false, features = ["encode", "decode"] }
+# Portable business logic + wire codec (host-testable; see domain/ crate)
+domain = { path = "../domain" }

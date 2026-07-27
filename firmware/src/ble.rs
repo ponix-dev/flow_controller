@@ -1,10 +1,11 @@
 use defmt::{error, info, warn};
-use embassy_nrf::nvmc::Nvmc;
 use embassy_time::{Duration, Timer};
 use trouble_host::prelude::*;
 
+use domain::LorawanKeys;
+
 use crate::flash;
-use crate::shared::{CONNECTIONS_MAX, L2CAP_CHANNELS_MAX, LORAWAN_KEYS, LorawanKeys};
+use crate::shared::{CONNECTIONS_MAX, L2CAP_CHANNELS_MAX, LORAWAN_KEYS, SharedNvmc};
 
 // ── GATT Service ────────────────────────────────────────────────────────────
 // UUIDs must match cli/src/main.rs:
@@ -63,7 +64,7 @@ async fn advertise<'values, 'server, C: Controller>(
 async fn gatt_events_task(
     server: &ProvisionServer<'_>,
     conn: &GattConnection<'_, '_, DefaultPacketPool>,
-    nvmc: &mut Nvmc<'_>,
+    nvmc: &SharedNvmc,
 ) -> Result<(), Error> {
     let keys_handle = server.provision_service.lorawan_keys;
     let reason = loop {
@@ -105,7 +106,10 @@ async fn gatt_events_task(
                         info!("[ble] keys unchanged, skipping update");
                     } else {
                         info!("[ble] LoRaWAN keys provisioned, DevEUI: {:02x}", keys.deveui);
-                        flash::write_keys(nvmc, &keys);
+                        {
+                            let mut guard = nvmc.lock().await;
+                            flash::write_keys(&mut guard, &keys);
+                        }
                         LORAWAN_KEYS.signal(keys);
                     }
                 }
@@ -119,9 +123,10 @@ async fn gatt_events_task(
 
 // ── Public entry point ──────────────────────────────────────────────────────
 
-pub(crate) async fn run_ble(
+#[embassy_executor::task]
+pub(crate) async fn provisioning_task(
     controller: nrf_sdc::SoftdeviceController<'static>,
-    mut nvmc: Nvmc<'static>,
+    nvmc: &'static SharedNvmc,
 ) {
     let address = Address::random([0xf0, 0x10, 0x42, 0xd0, 0xcb, 0xee]);
     info!("[ble] address = {:?}", address);
@@ -146,7 +151,7 @@ pub(crate) async fn run_ble(
         loop {
             match advertise(&mut peripheral, &server).await {
                 Ok(conn) => {
-                    let _ = gatt_events_task(&server, &conn, &mut nvmc).await;
+                    let _ = gatt_events_task(&server, &conn, nvmc).await;
                 }
                 Err(e) => {
                     let e = defmt::Debug2Format(&e);

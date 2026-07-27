@@ -1,7 +1,7 @@
-//! Generates micropb Rust types from `proto/` into `firmware/src/proto/`.
+//! Generates micropb Rust types from `proto/` into `domain/src/proto/`.
 //!
 //! Run via `mise run proto:gen`. The generated `.rs` is committed; cargo
-//! builds of the firmware do not need protoc on PATH.
+//! builds do not need protoc on PATH.
 
 use std::path::PathBuf;
 
@@ -12,7 +12,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .ok_or("could not derive workspace root from CARGO_MANIFEST_DIR")?;
 
     let proto_root = workspace_root.join("proto");
-    let out_path = workspace_root.join("firmware/src/proto/valve.rs");
+    let out_path = workspace_root.join("domain/src/proto/valve.rs");
 
     if let Some(parent) = out_path.parent() {
         std::fs::create_dir_all(parent)?;
