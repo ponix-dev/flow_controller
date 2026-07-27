@@ -63,6 +63,7 @@ where
         let dl = self.device.take_downlink()?;
         let data = dl.data.as_slice();
         let n = core::cmp::min(data.len(), buf.len());
+        info!("[lorawan] downlink: fport={} len={} data={:02x}", dl.fport, n, &data[..n]);
         buf[..n].copy_from_slice(&data[..n]);
         Some(n)
     }
