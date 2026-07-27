@@ -8,18 +8,19 @@ OTAA keys are provisioned over BLE by a host-side CLI; keys persist in flash.
 
 ## Status
 
-- **Today**: Class-A polling with a **stub** actuator — joins LoRaWAN US915
-  OTAA, sends a serialized `Uplink` (current + last-commanded valve state)
-  every 5 min, decodes `Downlink` commands and routes them into a stub valve
-  module that persists state to flash but drives no GPIO yet.
-- **Phase 1** (workspace foundation): **complete**.
-- **Phase 2** (`proto/` + `buf` lint + micropb codegen pipeline): **complete**.
-- **Phase 3** (end-to-end command path, stub actuator, `FCV1` flash record):
-  **complete** — the full encode/decode/persist/echo path is exercised with no
-  hardware risk.
-- **Up next**: Phase 4 — swap the stub for a real STSPIN250 H-bridge driver
-  that pulses the latching solenoid, and reconcile the schematic. See
-  [`ROADMAP.md`](ROADMAP.md).
+Roughly halfway: the full command path works in software, but the actuator is
+still a **stub** — no GPIO moves the valve yet.
+
+**Done**
+- Joins LoRaWAN US915 (OTAA) after BLE key provisioning; keys persist in flash.
+- Each poll, sends a serialized `Uplink` (current + last-commanded valve state).
+- Decodes `Downlink` commands, routes them through the valve state machine,
+  persists the new state to flash, and echoes it on the next uplink.
+
+**Next**
+- Replace the stub with a real STSPIN250 H-bridge driver that pulses the
+  latching solenoid, and reconcile the schematic.
+- Validate the downlink RX path and physical actuation on hardware.
 
 ## Workspace layout
 
@@ -29,7 +30,6 @@ firmware/        # embedded firmware (no_std, thumbv7em-none-eabi, Embassy); boa
 lorawan_flash/   # host-side BLE provisioning CLI (lf binary)
 proto/           # wire-format definitions (.proto, buf.yaml)
 proto_gen/       # host crate; runs micropb-gen to regenerate domain/src/proto/
-ROADMAP.md       # phased plan, see for current state and direction
 ```
 
 ## Where to start
@@ -38,7 +38,6 @@ ROADMAP.md       # phased plan, see for current state and direction
   [`CLAUDE.md`](CLAUDE.md). KiCad schematic and pin assignments live in the sibling
   `flow_controller_hardware/` repo.
 - **Provisioning OTAA keys onto a device** — see [`lorawan_flash/README.md`](lorawan_flash/README.md).
-- **Project direction and what to work on next** — see [`ROADMAP.md`](ROADMAP.md).
 
 ## Build / flash
 

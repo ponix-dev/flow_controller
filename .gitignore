@@ -1,6 +1,7 @@
 /target
 .env
 handoff.md
+ROADMAP.md
 .thoughts/
 
 # KiCad per-machine state (active sheet, view position)
